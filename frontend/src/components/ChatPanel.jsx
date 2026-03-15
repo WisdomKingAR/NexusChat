@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, memo } from 'react';
 import wsManager from '../utils/ws';
 import api from '../utils/api';
 import { toast } from 'sonner';
@@ -6,6 +6,67 @@ import { useAuth } from '../context/AuthContext';
 import { Send, Trash2, ShieldAlert } from 'lucide-react';
 import { parseCommand } from '../utils/commandParser';
 import anime from 'animejs';
+
+// Memoized individual message item to prevent re-renders when other messages or input state changes
+const MessageItem = memo(({ msg, userId, userRole, onDelete }) => {
+  const isOwner = msg.sender_id === userId;
+  const canDelete = userRole === 'admin' || userRole === 'moderator' || isOwner;
+
+  return (
+    <div
+      data-msg-id={msg.id}
+      className={`group flex items-start gap-3 ${isOwner ? 'flex-row-reverse' : ''} ${msg.is_system ? 'justify-center w-full !my-6' : ''}`}
+    >
+      {!msg.is_system && (
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-bold uppercase ring-2 ring-slate-800`}>
+          {msg.sender_name.substring(0, 2)}
+          </div>
+      )}
+
+      <div className={`space-y-1 ${msg.is_system ? 'max-w-xl w-full' : 'max-w-[70%]'}`}>
+        {!msg.is_system && (
+          <div className={`flex items-center gap-2 ${isOwner ? 'justify-end' : ''}`}>
+              <span className="text-xs font-bold text-text-secondary">{msg.sender_name}</span>
+              <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold
+              ${msg.sender_role === 'admin' ? 'text-role-admin bg-role-admin/10' :
+                  msg.sender_role === 'moderator' ? 'text-role-moderator bg-role-moderator/10' :
+                  'text-role-participant bg-role-participant/10'}`}>
+              {msg.sender_role}
+              </span>
+          </div>
+        )}
+
+        <div className={`rounded-2xl px-4 py-2 relative group transition-all duration-300
+          ${msg.is_system
+              ? 'bg-accent/5 border border-accent/20 text-accent text-center rounded-xl p-4 flex flex-col items-center'
+              : isOwner
+                  ? 'bg-accent text-white rounded-tr-none shadow-lg shadow-accent/20'
+                  : 'bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/50'}`}>
+
+          {msg.is_system && <ShieldAlert className="mb-2 opacity-50" size={24} />}
+          <p className={`text-sm whitespace-pre-wrap ${msg.is_system ? 'font-medium' : ''}`}>{msg.content}</p>
+
+          {!msg.is_system && canDelete && (
+            <button
+              onClick={() => onDelete(msg.id)}
+              className={`absolute -top-1 ${isOwner ? '-left-8' : '-right-8'} p-1.5 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all`}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+
+        {!msg.is_system && (
+          <p className={`text-[10px] text-text-secondary ${isOwner ? 'text-right' : ''}`}>
+              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+});
+
+MessageItem.displayName = 'MessageItem';
 
 const ChatPanel = ({ room }) => {
   const { user } = useAuth();
@@ -110,14 +171,27 @@ const ChatPanel = ({ room }) => {
     }
   };
 
-  const handleDelete = async (msgId) => {
+  const handleDelete = useCallback(async (msgId) => {
     try {
       await api.delete(`/api/messages/${msgId}`);
       toast.success('Message deleted');
     } catch (error) {
       toast.error('Failed to delete message');
     }
-  };
+  }, []);
+
+  // Memoize the entire message list to avoid re-rendering all messages on every keystroke in the input field
+  const renderedMessages = useMemo(() => {
+    return messages.map((msg) => (
+      <MessageItem
+        key={msg.id}
+        msg={msg}
+        userId={user.id}
+        userRole={user.role}
+        onDelete={handleDelete}
+      />
+    ));
+  }, [messages, user.id, user.role, handleDelete]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -135,59 +209,7 @@ const ChatPanel = ({ room }) => {
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
       >
-        {messages.map((msg) => (
-          <div 
-            key={msg.id} 
-            data-msg-id={msg.id}
-            className={`group flex items-start gap-3 ${msg.sender_id === user.id ? 'flex-row-reverse' : ''} ${msg.is_system ? 'justify-center w-full !my-6' : ''}`}
-          >
-            {!msg.is_system && (
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-bold uppercase ring-2 ring-slate-800`}>
-                {msg.sender_name.substring(0, 2)}
-                </div>
-            )}
-            
-            <div className={`space-y-1 ${msg.is_system ? 'max-w-xl w-full' : 'max-w-[70%]'}`}>
-              {!msg.is_system && (
-                <div className={`flex items-center gap-2 ${msg.sender_id === user.id ? 'justify-end' : ''}`}>
-                    <span className="text-xs font-bold text-text-secondary">{msg.sender_name}</span>
-                    <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold
-                    ${msg.sender_role === 'admin' ? 'text-role-admin bg-role-admin/10' : 
-                        msg.sender_role === 'moderator' ? 'text-role-moderator bg-role-moderator/10' : 
-                        'text-role-participant bg-role-participant/10'}`}>
-                    {msg.sender_role}
-                    </span>
-                </div>
-              )}
-
-              <div className={`rounded-2xl px-4 py-2 relative group transition-all duration-300
-                ${msg.is_system 
-                    ? 'bg-accent/5 border border-accent/20 text-accent text-center rounded-xl p-4 flex flex-col items-center' 
-                    : msg.sender_id === user.id 
-                        ? 'bg-accent text-white rounded-tr-none shadow-lg shadow-accent/20' 
-                        : 'bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700/50'}`}>
-                
-                {msg.is_system && <ShieldAlert className="mb-2 opacity-50" size={24} />}
-                <p className={`text-sm whitespace-pre-wrap ${msg.is_system ? 'font-medium' : ''}`}>{msg.content}</p>
-                
-                {!msg.is_system && (user.role === 'admin' || user.role === 'moderator' || msg.sender_id === user.id) && (
-                  <button 
-                    onClick={() => handleDelete(msg.id)}
-                    className={`absolute -top-1 ${msg.sender_id === user.id ? '-left-8' : '-right-8'} p-1.5 opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-              
-              {!msg.is_system && (
-                <p className={`text-[10px] text-text-secondary ${msg.sender_id === user.id ? 'text-right' : ''}`}>
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
+        {renderedMessages}
       </div>
 
       {/* Message Input */}

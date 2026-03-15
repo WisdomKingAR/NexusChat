@@ -129,6 +129,8 @@ except Exception as e:
 @app.on_event("startup")
 async def create_indexes():
     await db.users.create_index("email", unique=True)
+    # Optimized compound index for fetching room messages sorted by time
+    await db.messages.create_index([("room_id", 1), ("created_at", 1)])
     await db.messages.create_index("room_id")
     await db.messages.create_index("created_at")
     logger.info("MongoDB indexes ensured")
