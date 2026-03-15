@@ -153,15 +153,17 @@ class UserLogin(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-class UserProfile(BaseModel):
+class UserPublicProfile(BaseModel):
     id: str = Field(..., pattern=r"^[0-9a-f]{24}$")
-    email: str
     display_name: str
     role: str
     created_at: datetime
     is_online: bool = False
 
     model_config = ConfigDict(arbitrary_types_allowed=True, json_encoders={ObjectId: str}, extra='forbid')
+
+class UserProfile(UserPublicProfile):
+    email: str
 
 class Token(BaseModel):
     access_token: str
@@ -490,14 +492,13 @@ async def delete_message(message_id: str, request: Request, current_user: dict =
 
 # --- User Management ---
 
-@app.get("/api/users", response_model=List[UserProfile])
+@app.get("/api/users", response_model=List[UserPublicProfile])
 @limiter.limit("10/minute")
 async def get_users(request: Request, current_user: dict = Depends(get_current_user)):
     users = []
     async for user in db.users.find():
         users.append({
             "id": str(user["_id"]),
-            "email": user["email"],
             "display_name": user["display_name"],
             "role": user["role"],
             "created_at": user["created_at"]
