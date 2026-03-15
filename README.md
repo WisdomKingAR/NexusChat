@@ -1,4 +1,4 @@
-# NexusChat-v3
+# NexusChat
 
 NexusChat-v3 is a modern, real-time chat application built with a Python (FastAPI) backend and a React (Vite) frontend. It features secure user authentication, real-time messaging using WebSockets, and a responsive, dynamic user interface.
 
