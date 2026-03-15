@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": "d:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\backend\\.venv\\Scripts\\python.exe",
+    "python.venvPath": "d:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\backend",
+    "python.analysis.extraPaths": [
+        "d:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\backend",
+        "d:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\backend\\.venv\\Lib\\site-packages"
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "basic"
+}
