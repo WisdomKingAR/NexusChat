@@ -1,21 +1,42 @@
 import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import ChatPanel from '../components/ChatPanel';
+import DmChatPanel from '../components/DmChatPanel';
 import useLenis from '../hooks/useLenis';
 
 const Dashboard = () => {
   useLenis();
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedDm, setSelectedDm] = useState(null);
+
+  const handleRoomSelect = (room) => {
+    setSelectedDm(null);
+    setSelectedRoom(room);
+  };
+
+  const handleDmSelect = (dm) => {
+    setSelectedRoom(null);
+    setSelectedDm(dm);
+  };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar onRoomSelect={setSelectedRoom} selectedRoom={selectedRoom} />
+    <div className="flex h-screen bg-background overflow-hidden justify-center max-w-7xl mx-auto border-x border-slate-800">
+      <Sidebar 
+        onRoomSelect={handleRoomSelect} 
+        selectedRoom={selectedRoom} 
+        onDmSelect={handleDmSelect}
+        selectedDm={selectedDm}
+      />
       
-      <main className="flex-1 flex flex-col bg-background relative">
+      <main className="flex-1 flex flex-col bg-background relative overflow-hidden">
         {selectedRoom ? (
           <ChatPanel 
             room={selectedRoom} 
             onKicked={() => setSelectedRoom(null)} 
+          />
+        ) : selectedDm ? (
+          <DmChatPanel
+            channel={selectedDm}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6 animate-in fade-in zoom-in duration-500">
@@ -24,8 +45,8 @@ const Dashboard = () => {
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-white">Welcome to NexusChat v3</h2>
-              <p className="text-text-secondary max-w-sm">
-                Select a room from the sidebar to start collaborating with your team in real-time.
+              <p className="text-text-secondary max-w-sm mx-auto">
+                Select a room or highly secure DM from the sidebar to start collaborating in real-time.
               </p>
             </div>
             <div className="flex gap-4">

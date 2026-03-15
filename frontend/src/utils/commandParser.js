@@ -14,5 +14,6 @@ export const getCommandHelp = () => {
     { command: '/rooms', description: 'List all available rooms' },
     { command: '/kick @user', description: 'Remove a user (Mod+)' },
     { command: '/promote @user', description: 'Change user role (Admin only)' },
+    { command: '/demote @user', description: 'Change user role to participant (Admin only)' },
   ];
 };

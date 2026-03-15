@@ -1,6 +1,6 @@
 const API_HOST = import.meta.env.VITE_API_WS_URL || 'localhost:8000';
 
-class WebSocketManager {
+export class WebSocketManager {
   constructor() {
     this.socket = null;
     this.handlers = {};
@@ -17,7 +17,9 @@ class WebSocketManager {
     this.roomId = roomId;
     this.handlers = handlers;
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${protocol}://${API_HOST}/ws/${roomId}?token=${token}`;
+    const isDm = roomId.startsWith('dm_');
+    const endpoint = isDm ? `dm/${roomId.replace('dm_', '')}` : roomId;
+    const url = `${protocol}://${API_HOST}/ws/${endpoint}?token=${token}`;
 
     this.socket = new WebSocket(url);
 
@@ -68,5 +70,6 @@ class WebSocketManager {
   }
 }
 
-const wsManager = new WebSocketManager();
+export const wsManager = new WebSocketManager();
+export const dmWsManager = new WebSocketManager();
 export default wsManager;

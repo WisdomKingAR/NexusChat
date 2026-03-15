@@ -174,16 +174,18 @@ class Token(BaseModel):
 
 class RoomBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, pattern=r"^[a-zA-Z0-9 _-]+$")
+    is_private: bool = False
 
     model_config = ConfigDict(extra='forbid')
 
 class RoomCreate(RoomBase):
-    pass
+    members: List[str] = Field(default_factory=list)
 
 class Room(RoomBase):
     id: str = Field(..., pattern=r"^[0-9a-f]{24}$")
     created_by: str = Field(..., pattern=r"^[0-9a-f]{24}$")
     created_at: datetime
+    members: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(extra='forbid')
 
@@ -262,7 +264,35 @@ class ConnectionManager:
             if uid != user_id
         ]
 
+class DmConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, List[tuple[str, WebSocket]]] = {}
+
+    async def connect(self, websocket: WebSocket, channel_id: str, user_id: str):
+        await websocket.accept()
+        if channel_id not in self.active_connections:
+            self.active_connections[channel_id] = []
+        self.active_connections[channel_id].append((user_id, websocket))
+
+    def disconnect(self, websocket: WebSocket, channel_id: str):
+        if channel_id in self.active_connections:
+            self.active_connections[channel_id] = [
+                (uid, ws) for uid, ws in self.active_connections[channel_id]
+                if ws is not websocket
+            ]
+            if not self.active_connections[channel_id]:
+                self.active_connections.pop(channel_id, None)
+
+    async def broadcast(self, channel_id: str, message: dict):
+        if channel_id in self.active_connections:
+            for _, ws in self.active_connections[channel_id]:
+                try:
+                    await ws.send_json(message)
+                except Exception:
+                    pass
+
 manager = ConnectionManager()
+dm_manager = DmConnectionManager()
 
 # --- Utilities ---
 
@@ -371,12 +401,20 @@ async def get_me(request: Request, current_user: dict = Depends(get_current_user
 @limiter.limit("20/minute")
 async def get_rooms(request: Request, current_user: dict = Depends(get_current_user)):
     rooms = []
+    user_id = str(current_user["id"])
     async for room in db.rooms.find():
+        is_private = room.get("is_private", False)
+        members = room.get("members", [])
+        if is_private and current_user["role"] != "admin" and user_id not in members:
+            continue
+        
         rooms.append({
             "id": str(room["_id"]),
             "name": room["name"],
             "created_by": str(room["created_by"]),
-            "created_at": room["created_at"]
+            "created_at": room["created_at"],
+            "is_private": is_private,
+            "members": members
         })
     return rooms
 
@@ -393,14 +431,18 @@ async def create_room(request: Request, room_in: RoomCreate, current_user: dict 
     room_doc = {
         "name": room_in.name,
         "created_by": ObjectId(current_user["id"]),
-        "created_at": datetime.now(timezone.utc)
+        "created_at": datetime.now(timezone.utc),
+        "is_private": room_in.is_private,
+        "members": room_in.members
     }
     result = await db.rooms.insert_one(room_doc)
     return {
         "id": str(result.inserted_id),
         "name": room_in.name,
-        "created_by": current_user["id"],
-        "created_at": room_doc["created_at"]
+        "created_by": str(current_user["id"]),
+        "created_at": room_doc["created_at"],
+        "is_private": room_in.is_private,
+        "members": room_in.members
     }
 
 @app.delete("/api/rooms/{room_id}")
@@ -432,6 +474,11 @@ async def get_messages(room_id: str, request: Request, current_user: dict = Depe
 
     if current_user["id"] in room.get("banned_users", []):
         raise HTTPException(status_code=403, detail="You have been kicked from this room")
+        
+    is_private = room.get("is_private", False)
+    members = room.get("members", [])
+    if is_private and current_user["role"] != "admin" and current_user["id"] not in members:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     messages = []
     # Join with users to get sender details
@@ -458,7 +505,7 @@ async def get_messages(room_id: str, request: Request, current_user: dict = Depe
             "sender_name": msg["sender"]["display_name"],
             "sender_role": msg["sender"]["role"],
             "content": msg["content"],
-            "created_at": msg["created_at"]
+            "created_at": msg["created_at"].replace(tzinfo=timezone.utc)
         })
     return sorted(messages, key=lambda x: x["created_at"])
 
@@ -473,6 +520,11 @@ async def send_message(room_id: str, request: Request, msg_in: MessageCreate, cu
     # Prevent banned users from posting
     if current_user["id"] in room.get("banned_users", []):
         raise HTTPException(status_code=403, detail="You have been kicked from this room")
+        
+    is_private = room.get("is_private", False)
+    members = room.get("members", [])
+    if is_private and current_user["role"] != "admin" and current_user["id"] not in members:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     msg_doc = {
         "room_id": room_oid,
@@ -482,6 +534,12 @@ async def send_message(room_id: str, request: Request, msg_in: MessageCreate, cu
     }
     result = await db.messages.insert_one(msg_doc)
     
+    temp_iso = msg_doc["created_at"].isoformat()
+    if not temp_iso.endswith("Z"):
+        temp_iso = temp_iso.replace("+00:00", "Z")
+        if not temp_iso.endswith("Z"):
+            temp_iso += "Z"
+            
     message_data = {
         "id": str(result.inserted_id),
         "room_id": room_id,
@@ -489,7 +547,7 @@ async def send_message(room_id: str, request: Request, msg_in: MessageCreate, cu
         "sender_name": current_user["display_name"],
         "sender_role": current_user["role"],
         "content": msg_in.content,
-        "created_at": msg_doc["created_at"].isoformat()
+        "created_at": temp_iso
     }
     
     # Broadcast via WebSocket
@@ -631,6 +689,35 @@ async def execute_command(request: Request, cmd_req: CommandRequest, current_use
             })
             
         response = f"Promoted {target_name} to {new_role}"
+    elif command == "demote":
+        if current_user["role"] != "admin":
+            return {"status": "error", "message": "Permission denied"}
+        if not args:
+            return {"status": "error", "message": "Usage: /demote @username"}
+            
+        target_name = args[0].lstrip("@")
+        target_user = await db.users.find_one({"display_name": target_name})
+        if not target_user:
+            return {"status": "error", "message": f"User '{target_name}' not found"}
+            
+        if target_user["role"] == "participant":
+            return {"status": "error", "message": f"User '{target_name}' is already a participant"}
+            
+        if target_user["role"] == "admin":
+            return {"status": "error", "message": f"Cannot demote an admin"}
+            
+        new_role = "participant"
+        await db.users.update_one({"_id": target_user["_id"]}, {"$set": {"role": new_role}})
+        
+        # Broadcast role update globally
+        for active_room in manager.active_connections:
+            await manager.broadcast(active_room, {
+                "type": "role_updated",
+                "user_id": str(target_user["_id"]),
+                "new_role": new_role
+            })
+            
+        response = f"Demoted {target_name} to {new_role}"
     else:
         response = f"Unknown: /{command}"
         
@@ -656,7 +743,17 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, token: str = Qu
     # Check if user is banned from this room
     room_oid = validate_object_id(room_id, "room_id")
     room = await db.rooms.find_one({"_id": room_oid})
-    if room and str(user["_id"]) in room.get("banned_users", []):
+    if not room:
+        await websocket.close(code=4004)
+        return
+        
+    if str(user["_id"]) in room.get("banned_users", []):
+        await websocket.close(code=4003)
+        return
+        
+    is_private = room.get("is_private", False)
+    members = room.get("members", [])
+    if is_private and user["role"] != "admin" and str(user["_id"]) not in members:
         await websocket.close(code=4003)
         return
 
@@ -681,5 +778,166 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, token: str = Qu
             "user_id": str(user["_id"])
         })
 
+# --- DM Routes ---
+
+@app.get("/api/dm/channels")
+@limiter.limit("20/minute")
+async def get_dm_channels(request: Request, current_user: dict = Depends(get_current_user)):
+    user_id = str(current_user["id"])
+    channels = []
+    async for channel in db.dm_channels.find({"participants": user_id}):
+        channels.append({
+            "id": str(channel["_id"]),
+            "participants": channel["participants"],
+            "created_at": channel["created_at"],
+            "updated_at": channel.get("updated_at", channel["created_at"])
+        })
+    return channels
+
+@app.post("/api/dm/channels")
+@limiter.limit("10/minute")
+async def create_dm_channel(request: Request, recipient_id: str = Query(...), current_user: dict = Depends(get_current_user)):
+    user_id = str(current_user["id"])
+    if user_id == recipient_id:
+        raise HTTPException(status_code=400, detail="Cannot create DM with yourself")
+        
+    # Check if recipient exists
+    try:
+        recipient_oid = validate_object_id(recipient_id, "recipient_id")
+        recipient = await db.users.find_one({"_id": recipient_oid})
+        if not recipient:
+             raise HTTPException(status_code=404, detail="User not found")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+
+    participants = sorted([user_id, recipient_id])
+    existing = await db.dm_channels.find_one({"participants": participants})
+    if existing:
+        return {
+            "id": str(existing["_id"]),
+            "participants": existing["participants"],
+            "created_at": existing["created_at"]
+        }
+        
+    now = datetime.now(timezone.utc)
+    new_channel = {
+        "participants": participants,
+        "created_at": now,
+        "updated_at": now
+    }
+    result = await db.dm_channels.insert_one(new_channel)
+    return {
+        "id": str(result.inserted_id),
+        "participants": participants,
+        "created_at": new_channel["created_at"]
+    }
+
+@app.get("/api/dm/channels/{channel_id}/messages")
+@limiter.limit("30/minute")
+async def get_dm_messages(channel_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    channel_oid = validate_object_id(channel_id, "channel_id")
+    channel = await db.dm_channels.find_one({"_id": channel_oid})
+    if not channel or str(current_user["id"]) not in channel["participants"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    messages = []
+    pipeline = [
+        {"$match": {"channel_id": channel_oid}},
+        {"$sort": {"created_at": -1}},
+        {"$limit": 50},
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "sender_id",
+                "foreignField": "_id",
+                "as": "sender"
+            }
+        },
+        {"$unwind": "$sender"}
+    ]
+    
+    async for msg in db.dm_messages.aggregate(pipeline):
+        messages.append({
+            "id": str(msg["_id"]),
+            "channel_id": str(msg["channel_id"]),
+            "sender_id": str(msg["sender_id"]),
+            "sender_name": msg["sender"]["display_name"],
+            "content": msg["content"],
+            "created_at": msg["created_at"].replace(tzinfo=timezone.utc)
+        })
+    return sorted(messages, key=lambda x: x["created_at"])
+
+@app.post("/api/dm/channels/{channel_id}/messages")
+@limiter.limit("60/minute")
+async def send_dm_message(channel_id: str, request: Request, msg_in: MessageCreate, current_user: dict = Depends(get_current_user)):
+    channel_oid = validate_object_id(channel_id, "channel_id")
+    channel = await db.dm_channels.find_one({"_id": channel_oid})
+    if not channel or str(current_user["id"]) not in channel["participants"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    now_dt = datetime.now(timezone.utc)
+    msg_doc = {
+        "channel_id": channel_oid,
+        "sender_id": ObjectId(current_user["id"]),
+        "content": msg_in.content,
+        "created_at": now_dt
+    }
+    result = await db.dm_messages.insert_one(msg_doc)
+    
+    await db.dm_channels.update_one(
+        {"_id": channel_oid},
+        {"$set": {"updated_at": now_dt}}
+    )
+    
+    temp_iso = msg_doc["created_at"].isoformat()
+    if not temp_iso.endswith("Z"):
+        temp_iso = temp_iso.replace("+00:00", "Z")
+        if not temp_iso.endswith("Z"):
+            temp_iso += "Z"
+            
+    message_data = {
+        "id": str(result.inserted_id),
+        "channel_id": channel_id,
+        "sender_id": current_user["id"],
+        "sender_name": current_user["display_name"],
+        "content": msg_in.content,
+        "created_at": temp_iso
+    }
+    
+    await dm_manager.broadcast(channel_id, {"type": "new_dm", "message": message_data})
+    
+    return message_data
+
+@app.websocket("/ws/dm/{channel_id}")
+async def dm_websocket_endpoint(websocket: WebSocket, channel_id: str, token: str = Query(...)):
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        email: Optional[str] = payload.get("sub")
+        if not email:
+            raise JWTError()
+        user = await db.users.find_one({"email": email})
+        if not user:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except JWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
+    channel_oid = validate_object_id(channel_id, "channel_id")
+    channel = await db.dm_channels.find_one({"_id": channel_oid})
+    if not channel or str(user["_id"]) not in channel["participants"]:
+        await websocket.close(code=4003)
+        return
+
+    user_id = str(user["_id"])
+    await dm_manager.connect(websocket, channel_id, user_id)
+    
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        dm_manager.disconnect(websocket, channel_id)
+
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=PORT, reload=True)
+
