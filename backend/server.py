@@ -221,25 +221,46 @@ class RoleUpdate(BaseModel):
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: Dict[str, List[WebSocket]] = {}
+        # room_id -> list of (user_id, WebSocket) tuples
+        self.active_connections: Dict[str, List[tuple[str, WebSocket]]] = {}
 
-    async def connect(self, websocket: WebSocket, room_id: str):
+    async def connect(self, websocket: WebSocket, room_id: str, user_id: str):
         await websocket.accept()
         if room_id not in self.active_connections:
             self.active_connections[room_id] = []
-        self.active_connections[room_id].append(websocket)
+        self.active_connections[room_id].append((user_id, websocket))
 
     def disconnect(self, websocket: WebSocket, room_id: str):
         if room_id in self.active_connections:
-            if websocket in self.active_connections[room_id]:
-                self.active_connections[room_id].remove(websocket)
+            self.active_connections[room_id] = [
+                (uid, ws) for uid, ws in self.active_connections[room_id]
+                if ws is not websocket
+            ]
             if not self.active_connections[room_id]:
                 self.active_connections.pop(room_id, None)
 
     async def broadcast(self, room_id: str, message: dict):
         if room_id in self.active_connections:
-            for connection in self.active_connections[room_id]:
-                await connection.send_json(message)
+            for _, ws in self.active_connections[room_id]:
+                try:
+                    await ws.send_json(message)
+                except Exception:
+                    pass
+
+    async def disconnect_user(self, room_id: str, user_id: str):
+        """Close all WebSocket connections for a specific user in a room."""
+        if room_id not in self.active_connections:
+            return
+        to_close = [ws for uid, ws in self.active_connections[room_id] if uid == user_id]
+        for ws in to_close:
+            try:
+                await ws.close(code=4003)  # custom code: kicked
+            except Exception:
+                pass
+        self.active_connections[room_id] = [
+            (uid, ws) for uid, ws in self.active_connections[room_id]
+            if uid != user_id
+        ]
 
 manager = ConnectionManager()
 
@@ -409,6 +430,9 @@ async def get_messages(room_id: str, request: Request, current_user: dict = Depe
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
+    if current_user["id"] in room.get("banned_users", []):
+        raise HTTPException(status_code=403, detail="You have been kicked from this room")
+
     messages = []
     # Join with users to get sender details
     pipeline = [
@@ -445,6 +469,10 @@ async def send_message(room_id: str, request: Request, msg_in: MessageCreate, cu
     room = await db.rooms.find_one({"_id": room_oid})
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+
+    # Prevent banned users from posting
+    if current_user["id"] in room.get("banned_users", []):
+        raise HTTPException(status_code=403, detail="You have been kicked from this room")
 
     msg_doc = {
         "room_id": room_oid,
@@ -555,12 +583,30 @@ async def execute_command(request: Request, cmd_req: CommandRequest, current_use
         if not target_user:
             return {"status": "error", "message": f"User '{target_name}' not found"}
             
+        target_id = str(target_user["_id"])
+
+        # Prevent kicking admins
+        if target_user["role"] == "admin":
+            return {"status": "error", "message": "Cannot kick an admin"}
+
+        # 1. Persist ban in the room document
+        room_oid = validate_object_id(room_id, "room_id")
+        await db.rooms.update_one(
+            {"_id": room_oid},
+            {"$addToSet": {"banned_users": target_id}}
+        )
+
+        # 2. Broadcast the kick event (so frontend can react)
         await manager.broadcast(room_id, {
             "type": "user_kicked",
-            "user_id": str(target_user["_id"]),
+            "user_id": target_id,
             "user_name": target_name,
             "kicked_by": current_user["display_name"]
         })
+
+        # 3. Force-disconnect the user's WebSocket(s)
+        await manager.disconnect_user(room_id, target_id)
+
         response = f"Kicked {target_name} from the room"
     elif command == "promote":
         if current_user["role"] != "admin":
@@ -607,7 +653,15 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, token: str = Qu
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await manager.connect(websocket, room_id)
+    # Check if user is banned from this room
+    room_oid = validate_object_id(room_id, "room_id")
+    room = await db.rooms.find_one({"_id": room_oid})
+    if room and str(user["_id"]) in room.get("banned_users", []):
+        await websocket.close(code=4003)
+        return
+
+    user_id = str(user["_id"])
+    await manager.connect(websocket, room_id, user_id)
     await manager.broadcast(room_id, {
         "type": "user_joined",
         "user": {

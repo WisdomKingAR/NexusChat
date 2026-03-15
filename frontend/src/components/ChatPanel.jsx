@@ -68,7 +68,7 @@ const MessageItem = memo(({ msg, userId, userRole, onDelete }) => {
 
 MessageItem.displayName = 'MessageItem';
 
-const ChatPanel = ({ room }) => {
+const ChatPanel = ({ room, onKicked }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -103,6 +103,24 @@ const ChatPanel = ({ room }) => {
         } else if (data.type === 'role_updated') {
             // Locally update role in messages if sender_id matches
             setMessages(prev => prev.map(m => m.sender_id === data.user_id ? { ...m, sender_role: data.new_role } : m));
+        } else if (data.type === 'user_kicked') {
+          if (data.user_id === user.id) {
+            toast.error(`You have been kicked from #${room.name} by ${data.kicked_by}`);
+            wsManager.disconnect();           // stop auto-reconnect
+            if (onKicked) onKicked();          // tell parent to deselect room
+          } else {
+            // Show a system-style notification for other users
+            const sysMsg = {
+              id: 'sys-kick-' + Date.now(),
+              content: `${data.user_name} was kicked by ${data.kicked_by}`,
+              sender_id: 'system',
+              sender_name: 'System',
+              sender_role: 'system',
+              created_at: new Date().toISOString(),
+              is_system: true
+            };
+            setMessages(prev => [...prev, sysMsg]);
+          }
         }
       },
       onDisconnect: () => setIsConnecting(false),

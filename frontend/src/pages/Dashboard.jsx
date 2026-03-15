@@ -13,7 +13,10 @@ const Dashboard = () => {
       
       <main className="flex-1 flex flex-col bg-background relative">
         {selectedRoom ? (
-          <ChatPanel room={selectedRoom} />
+          <ChatPanel 
+            room={selectedRoom} 
+            onKicked={() => setSelectedRoom(null)} 
+          />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6 animate-in fade-in zoom-in duration-500">
             <div className="w-24 h-24 rounded-3xl bg-accent/10 flex items-center justify-center text-accent">

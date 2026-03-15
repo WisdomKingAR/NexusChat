@@ -39,7 +39,8 @@ class WebSocketManager {
       if (this.handlers.onDisconnect) this.handlers.onDisconnect();
       
       // Auto-reconnect if not intentionally closed
-      if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+      // 1000 = normal closure, 4003 = kicked by admin
+      if (event.code !== 1000 && event.code !== 4003 && this.reconnectAttempts < this.maxReconnectAttempts) {
         this.reconnectAttempts++;
         const timeout = Math.pow(2, this.reconnectAttempts) * 1000;
         console.log(`Attempting reconnect in ${timeout}ms...`);
