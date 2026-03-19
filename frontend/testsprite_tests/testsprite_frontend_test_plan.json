@@ -1,0 +1,147 @@
+[
+  {
+    "id": "TC001",
+    "title": "Dashboard loads with header, room list, and empty prompt",
+    "description": "Verifies the authenticated dashboard shell renders and prompts the user to select a room before any room is chosen.",
+    "category": "Dashboard & Room Selection",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Header\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Sidebar\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Room list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Select a room to start chatting\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Select a room and see message history rendered",
+    "description": "Verifies selecting a room from the sidebar loads and renders the room’s message history in the chat panel.",
+    "category": "Dashboard & Room Selection",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first room in the sidebar room list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Chat panel\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Message list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Message composer\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Switch rooms and ensure the selected room changes",
+    "description": "Verifies switching from one room to another updates the UI to reflect the newly selected room and its message list.",
+    "category": "Dashboard & Room Selection",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first room in the sidebar room list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Selected room indicator\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on a different room in the sidebar room list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Selected room indicator\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Auto-scroll positions the chat view at the latest messages after room load",
+    "description": "Verifies that after loading a room, the chat panel shows the most recent messages (auto-scrolled to bottom).",
+    "category": "Dashboard & Room Selection",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first room in the sidebar room list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Message list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Latest message\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Message composer\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Room list is visible and selectable after initial dashboard load",
+    "description": "Verifies the sidebar room list is interactive and allows selection without breaking the dashboard layout.",
+    "category": "Dashboard & Room Selection",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Room list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first room in the sidebar room list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Chat panel\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Message list\" is visible"
+      }
+    ]
+  }
+]

@@ -1,0 +1,54 @@
+version: "2"
+type: backend
+tech_stack:
+  - Python
+  - FastAPI
+  - MongoDB (Motor)
+  - Jose (JWT)
+  - Bcrypt
+  - Slowapi (Rate limiting)
+features:
+  - name: Authentication API
+    description: User registration, login, and profile management
+    files:
+      - server.py
+    endpoints:
+      - method: POST
+        path: /api/auth/register
+        description: Register a new user
+        auth_required: false
+      - method: POST
+        path: /api/auth/login
+        description: Authenticate user and return token
+        auth_required: false
+      - method: GET
+        path: /api/auth/me
+        description: Get current user profile
+        auth_required: true
+  - name: Room Management API
+    description: CRUD operations for chat rooms
+    files:
+      - server.py
+    endpoints:
+      - method: GET
+        path: /api/rooms
+        description: List available rooms
+        auth_required: true
+      - method: POST
+        path: /api/rooms
+        description: Create a new room (Admin only)
+        auth_required: true
+      - method: DELETE
+        path: /api/rooms/{room_id}
+        description: Delete a room (Admin only)
+        auth_required: true
+  - name: Messaging API
+    description: Fetch messages and real-time communication
+    files:
+      - server.py
+    endpoints:
+      - method: GET
+        path: /api/rooms/{room_id}/messages
+        description: List messages for a room
+        auth_required: true
+known_limitations: []

@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8001",
+  "backendAuthType": "Bearer token",
+  "backendCredential": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkB0ZXN0LmNvbSIsImV4cCI6MTc3Mzk4NjE3M30.0yfeSYzVT0s1KKpSldMA9bbAHT8tQWU1Ew2VvUAnGgk",
+  "executionArgs": {
+    "projectName": "nexuschat-v3",
+    "projectPath": "D:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\backend",
+    "testIds": [],
+    "additionalInstruction": "Run the tests and generate the report.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-xMMwdxmlAWxiADI9lZsVD49vclYjPRne4Ntp3L_K6rOYFk3FkBIpC0V6ijq2K5SiRtYo1sMu7pqVFsXvVTwLpSYnBWmLUjxkTiS1aeRahp06eWnJtYjwPNRw89D6geX99w0"
+    }
+  },
+  "serverPort": 58979,
+  "proxy": "http://c1735910-cda1-4359-9cfc-e15a8a15a87a:gR1JrCGdMv15kKbVuTbf13OvEU6s1NZq@tun.testsprite.com:8080"
+}

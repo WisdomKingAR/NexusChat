@@ -129,6 +129,12 @@ const DmChatPanel = ({ channel, onClose }) => {
           <input
             type="text"
             value={input}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(e);
+              }
+            }}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Message @${channel.other_user.display_name}`}
             className="flex-1 bg-background border border-slate-800 rounded-xl px-4 py-3 text-sm focus:border-accent outline-none ring-accent/20 transition-all focus:ring-4"

@@ -11,6 +11,7 @@ imports = [
     "fastapi",
     "jose",
     "motor",
+    "motor.motor_asyncio",
     "pydantic",
     "bson",
     "dotenv",

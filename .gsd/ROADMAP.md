@@ -1,11 +1,28 @@
-# Roadmap: NexusChat v3 New Features
+# NexusChat ROADMAP.md — Waves of Work
 
-## Phase 1: Core Functionality (Current Milestone)
+## Wave 1: Foundation (Supabase & Auth)
+- [ ] Connect Supabase Project URL + Key.
+- [ ] Implement/Verify `AuthContext.jsx` with Supabase Auth.
+- [ ] Setup `profiles` table and `handle_new_user` trigger.
+- [ ] Define and apply RLS policies for `profiles`.
 
-- [x] **Wave 1**: `/demote` Command
-- [x] **Wave 2**: Invite-Only Channels
-- [x] **Wave 3**: Personal DMs
+## Wave 2: Real-time Communication
+- [ ] Setup `rooms` and `messages` tables.
+- [ ] Implement Real-time message subscription in `ChatPanel.jsx`.
+- [ ] Enable optimistic UI updates for message sending.
 
-## Phase 2: Polish & Security
-- [ ] Final Security Review
-- [ ] E2E Testing with Browser
+## Wave 3: Feature Restoration (Critical)
+- [ ] Restore Direct Messaging (DM) flow and `DmChatPanel.jsx`.
+- [ ] Implement Invite-Only room logic and `room_members` table.
+- [ ] Verification: Test DM flow between test users.
+
+## Wave 4: Role Management & Commands
+- [ ] Implement `/help`, `/rooms`, `/kick`, `/promote`, `/demote`.
+- [ ] Integrate Role badges in messages and sidebar.
+- [ ] Restrict UI elements based on `isAdmin` / `isMod` / `canModerate` flags.
+
+## Wave 5: Premium Polish & Verification
+- [ ] Integrate Lenis and anime.js across the app.
+- [ ] Apply uiverse.io micro-interactions.
+- [ ] Conduct final Ralph Loop Security Audit (Rate limiting, sanitization).
+- [ ] End-to-End browser verification (2 tabs).

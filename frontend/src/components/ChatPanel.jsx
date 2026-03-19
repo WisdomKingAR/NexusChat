@@ -238,6 +238,12 @@ const ChatPanel = ({ room, onKicked }) => {
             placeholder={`Message #${room.name}...`}
             className="flex-1 rounded-lg bg-background border border-slate-700 px-4 py-2 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all text-sm"
             value={input}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend(e);
+              }
+            }}
             onChange={(e) => setInput(e.target.value)}
           />
           <button 

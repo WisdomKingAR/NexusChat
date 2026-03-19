@@ -31,6 +31,16 @@ const Sidebar = ({ onRoomSelect, selectedRoom, onDmSelect, selectedDm }) => {
 
   useEffect(() => {
     fetchData();
+
+    const handleSocketMessage = (e) => {
+      const data = e.detail;
+      if (data.type === 'role_updated') {
+        fetchData(); // Simplest way to keep all user roles in sync in the sidebar
+      }
+    };
+
+    window.addEventListener('nexus_socket_message', handleSocketMessage);
+    return () => window.removeEventListener('nexus_socket_message', handleSocketMessage);
   }, []);
 
   const handleCreateRoom = async (roomData) => {

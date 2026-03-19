@@ -1,0 +1,25 @@
+version: "2"
+type: frontend
+tech_stack:
+  - React (Vite)
+  - TailwindCSS v4
+  - Framer Motion
+  - Lucide React
+features:
+  - name: User Authentication
+    description: Login and signup pages for user entry
+    files:
+      - src/pages/Login.jsx
+      - src/pages/Register.jsx
+  - name: Dashboard
+    description: Main interface for rooms and messaging
+    files:
+      - src/pages/Dashboard.jsx
+      - src/components/Sidebar.jsx
+      - src/components/ChatPanel.jsx
+  - name: Room Management
+    description: Controls for creating and deleting rooms
+    files:
+      - src/components/CreateRoomModal.jsx
+      - src/components/RoomSettingsPanel.jsx
+known_limitations: []

@@ -23,7 +23,19 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     checkAuth();
-  }, []);
+
+    const handleSocketMessage = (e) => {
+      const data = e.detail;
+      if (data.type === 'role_updated' && user && data.user_id === user.id) {
+        const updatedUser = { ...user, role: data.new_role };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    };
+
+    window.addEventListener('nexus_socket_message', handleSocketMessage);
+    return () => window.removeEventListener('nexus_socket_message', handleSocketMessage);
+  }, [user?.id]);
 
   const login = async (email, password) => {
     const res = await api.post('/api/auth/login', { email, password });

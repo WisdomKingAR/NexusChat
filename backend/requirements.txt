@@ -9,3 +9,5 @@ pydantic[email]
 slowapi
 python-multipart
 starlette
+motor-types
+

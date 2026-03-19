@@ -1,0 +1,12 @@
+[
+  {"id": "TC001", "title": "User Registration", "description": "Test registration with display_name, expect 201."},
+  {"id": "TC002", "title": "User Login", "description": "Test login, expect 201."},
+  {"id": "TC003", "title": "User Profile", "description": "Fetch current user profile, expect 200."},
+  {"id": "TC004", "title": "Create Room", "description": "Admin creates room, expect 201."},
+  {"id": "TC005", "title": "Room Permissions", "description": "Check Admin vs Participant privileges and empty name validation."},
+  {"id": "TC006", "title": "Delete Room", "description": "Admin deletes room, expect 200."},
+  {"id": "TC007", "title": "List Messages", "description": "Fetch messages for room, expect 200."},
+  {"id": "TC008", "title": "Send Message", "description": "Send message to room, expect 201."},
+  {"id": "TC009", "title": "Delete Message", "description": "Admin deletes message, expect 200."},
+  {"id": "TC010", "title": "Update Role", "description": "Admin updates user role, expect 200."}
+]

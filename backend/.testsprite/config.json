@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8001",
+  "backendAuthType": "Bearer token",
+  "backendCredential": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkB0ZXN0LmNvbSIsImV4cCI6MTc3Mzk4NjE3M30.0yfeSYzVT0s1KKpSldMA9bbAHT8tQWU1Ew2VvUAnGgk",
+  "executionArgs": {
+    "projectName": "backend",
+    "projectPath": "D:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\backend",
+    "testIds": [],
+    "additionalInstruction": "I have already fixed all test cases (TC001-TC010) and verified them locally with a 100% pass rate. Please execute the existing test scripts in the backend/testsprite_tests directory against the local server on port 8001. Ensure cleanup_test_data.py and setup_admin.py are considered as pre-requisites if possible, or just run the existing .py files which now handle their own dynamic tokens.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-xMMwdxmlAWxiADI9lZsVD49vclYjPRne4Ntp3L_K6rOYFk3FkBIpC0V6ijq2K5SiRtYo1sMu7pqVFsXvVTwLpSYnBWmLUjxkTiS1aeRahp06eWnJtYjwPNRw89D6geX99w0"
+    }
+  },
+  "serverPort": 52777,
+  "proxy": "http://f8a9a890-fb50-4117-a735-754514c970ec:HKILIZG1DrtRLompO1swuFrgKPIlm8DD@tun.testsprite.com:8080"
+}

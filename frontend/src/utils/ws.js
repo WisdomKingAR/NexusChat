@@ -34,6 +34,8 @@ export class WebSocketManager {
       if (this.handlers.onMessage) {
         this.handlers.onMessage(data);
       }
+      // Dispatch a global event for system-wide updates (e.g., role changes)
+      window.dispatchEvent(new CustomEvent('nexus_socket_message', { detail: data }));
     };
 
     this.socket.onclose = (event) => {

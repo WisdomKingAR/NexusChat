@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5173",
+  "loginUser": "admin@test.com",
+  "loginPassword": "Test@123",
+  "executionArgs": {
+    "projectName": "nexuschat-v3-frontend",
+    "projectPath": "D:\\AARYAN\\HACKATHONS\\ACM ReCode\\nexuschat-v3\\frontend",
+    "testIds": [],
+    "additionalInstruction": "Please run the 30 highest priority tests.",
+    "serverMode": "production",
+    "envs": {
+      "API_KEY": "sk-user-xMMwdxmlAWxiADI9lZsVD49vclYjPRne4Ntp3L_K6rOYFk3FkBIpC0V6ijq2K5SiRtYo1sMu7pqVFsXvVTwLpSYnBWmLUjxkTiS1aeRahp06eWnJtYjwPNRw89D6geX99w0"
+    }
+  },
+  "serverPort": 51366,
+  "proxy": "http://0fc032a4-fc38-4ed5-a348-e63fce9f2c67:LYNqbJil0zo7Tla8tLuBE9RX069NZ1YW@tun.testsprite.com:8080"
+}
