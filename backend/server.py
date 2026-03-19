@@ -38,7 +38,7 @@ DB_NAME = os.getenv("DB_NAME", "nexuschat_v3")
 JWT_SECRET = os.getenv("JWT_SECRET")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60  # 24 hours
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:3001").split(",")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:3001,https://nexus-chat-eta.vercel.app").split(",")
 PORT = int(os.getenv("PORT", 8001))
 
 logger.debug(f"CORS_ORIGINS loaded: {CORS_ORIGINS}")
